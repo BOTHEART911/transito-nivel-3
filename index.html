@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Adivina Términos - Héroe Vial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Favicon -->
+  <link rel="icon" href="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/Logo_rkja6o.png" type="image/png">
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SweetAlert CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .game-btn:active { transform: scale(0.98);}
+    .stage-bg { background: linear-gradient(135deg, #dbeafe 60%, #fef08a 100%);}
+    .shake { animation: shake 0.4s;}
+    @keyframes shake {
+      0% { transform: translateX(0);}
+      20% { transform: translateX(-8px);}
+      40% { transform: translateX(8px);}
+      60% { transform: translateX(-4px);}
+      80% { transform: translateX(4px);}
+      100% { transform: translateX(0);}
+    }
+    .tránsito-entity-img {
+      width: 60px;
+      max-width: 22vw;
+      margin-bottom: 0.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 24px #0001;
+      display: block;
+    }
+    .avatar-img {
+      width: 70px;
+      height: 95px;
+      object-fit: contain;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 2px 12px #0002;
+      border: 2px solid #e0e7ff;
+      margin: 0 auto;
+      transition: box-shadow 0.2s, border 0.2s;
+    }
+    .avatar-img.selected {
+      box-shadow: 0 0 0 4px #fde047;
+      border-color: #f59e42;
+    }
+    .volver-btn {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      z-index: 40;
+    }
+    .confetti {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none;
+      z-index: 100;
+      overflow: hidden;
+    }
+    .confetti-piece {
+      position: absolute;
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      opacity: 0.85;
+      animation: confetti-fall 1.8s cubic-bezier(.62,.02,.37,.99) forwards;
+    }
+    @keyframes confetti-fall {
+      0% { transform: translateY(-20px) rotate(0deg); opacity: 1;}
+      80% { opacity: 1;}
+      100% { transform: translateY(90vh) rotate(360deg); opacity: 0;}
+    }
+    .aprobado-txt {
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #10b981;
+      background: linear-gradient(90deg,#fef08a 20%,#a7f3d0 80%);
+      padding: 0.35em 1em;
+      border-radius: 2em;
+      box-shadow: 0 4px 24px #eab30833;
+      margin-bottom: 1em;
+      animation: aprobadoPulse 1.1s infinite alternate;
+    }
+    @keyframes aprobadoPulse {
+      0% { transform: scale(1);}
+      100% { transform: scale(1.08);}
+    }
+    .codigo-premio {
+      font-size: 1.5rem;
+      background: #fbbf24;
+      color: #fff;
+      padding: 0.3em 1em;
+      border-radius: 1.2em;
+      font-weight: bold;
+      box-shadow: 0 2px 8px #f59e4233;
+      letter-spacing: 2px;
+      margin-bottom: 1em;
+    }
+    .modal-juego {
+      border-radius: 1em !important;
+      padding: 1.2em 0.7em !important;
+      min-height: unset !important;
+    }
+    .pregunta-txt, .nivel-txt, .text-lg, .text-xl, .font-bold {
+      font-size: 1.2rem !important;
+      line-height: 1.2 !important;
+    }
+    .game-btn, .opcion-btn {
+      padding: 0.7em 0.7em !important;
+      font-size: 1.1rem !important;
+    }
+    .guion-letra {
+      font-size: 2.2rem;
+      font-family: 'Courier New', Courier, monospace;
+      letter-spacing: 0.12em;
+      margin: 0.1em 0.1em;
+    }
+    .timer {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #eab308;
+      background: #fef08a;
+      padding: 0.2em 1em;
+      border-radius: 1.4em;
+      box-shadow: 0 2px 8px #fde04722;
+      margin-bottom: 1em;
+      display: inline-block;
+    }
+    @media (max-width:600px) {
+      .avatar-img { width: 48px; height: 68px; }
+      .max-w-md, .max-w-lg { max-width: 95vw !important;}
+      .guion-letra { font-size: 1.5rem;}
+      .pregunta-txt, .nivel-txt { font-size: 0.95rem !important;}
+    }
+    @media (max-width:480px) {
+      .rounded-3xl, .modal-juego {
+        border-radius: 1em !important;
+        padding: 0.5em 0.3em !important;
+        min-height: unset !important;
+      }
+      .pregunta-txt, .nivel-txt, .text-lg, .text-xl, .font-bold {
+        font-size: 0.95rem !important;
+        line-height: 1.2 !important;
+      }
+      .game-btn, .opcion-btn {
+        padding: 0.7em 0.4em !important;
+        font-size: 1rem !important;
+      }
+      .max-w-md, .max-w-lg { max-width: 98vw !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-bl from-blue-100 to-yellow-100">
+  <div id="app" class="w-full max-w-2xl mx-auto mt-4 relative"></div>
+  <div id="confetti"></div>
+
+  <!-- SONIDOS NUEVOS -->
+  <audio id="audio-inicio" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756841760/intro_b1nuvu.mp3" preload="auto"></audio>
+  <audio id="audio-tictac" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756843183/tictoc_j7oje6.mp3" preload="auto"></audio>
+  <audio id="audio-bien" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844320/correcto_svttl1.mp3" preload="auto"></audio>
+  <audio id="audio-mal" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844319/incorrecto_h5vgbl.mp3" preload="auto"></audio>
+  <audio id="audio-fin" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844514/final_ein36c.mp3" preload="auto"></audio>
+  <audio id="audio-fiesta" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844514/ganar_tfdnmh.mp3" preload="auto"></audio>
+
+  <script>
+    // --- CONSTANTES ---
+    const CODIGO_PREMIO = "STT1109";
+    const FELICITACION = "¡Haz completado el tercer nivel, eres un héroe vial!";
+    const TIEMPO_PREGUNTA = 60; // segundos por pregunta
+    const MINIMO_ACIERTOS = 20;
+
+    // Avatares igual que antes
+    const AVATARS = [
+      "https://res.cloudinary.com/dqqeavica/image/upload/v1756828158/avatar_1_gjnwup.png",
+      "https://res.cloudinary.com/dqqeavica/image/upload/v1756828158/avatar_2_om3ufg.png",
+      "https://res.cloudinary.com/dqqeavica/image/upload/v1756828158/avatar_3_dswwyx.png",
+      "https://res.cloudinary.com/dqqeavica/image/upload/v1756828158/avatar_4_rhcecg.png",
+      "https://res.cloudinary.com/dqqeavica/image/upload/v1756828159/avatar_5_yx0wam.png",
+      "https://res.cloudinary.com/dqqeavica/image/upload/v1756828159/avatar_6_gdxczb.png"
+    ];
+
+    // --- PREGUNTAS Y RESPUESTAS ---
+    const PREGUNTAS = [
+      {
+        term: "ACERA O ANDEN",
+        def: "Franja de la vía urbana, destinada exclusivamente a la circulación de peatones, ubicada en los costados de esta.",
+        tarea: "Sal con tus padres y señala una acera o andén, explícale por qué es importante para los peatones."
+      },
+      {
+        term: "ACCIDENTES DE TRANSITO",
+        def: "Evento generalmente involuntario, generado al menos por un vehículo en movimiento, que causa daños a personas y bienes involucrados en él, y que afecta la normal circulación de vehículos que se movilizan por la vía o vías comprendidas en el lugar o dentro de la zona de influencia del hecho.",
+        tarea: "Pregunta a tus padres si han presenciado un accidente de tránsito y conversa sobre cómo evitarlos."
+      },
+      {
+        term: "ACOMPANANTE",
+        def: "Persona que viaja con el conductor de un vehículo automotor.",
+        tarea: "Dibuja un vehículo con acompañantes y explica su importancia."
+      },
+      {
+        term: "AGENTE DE TRANSITO",
+        def: "Todo funcionario o persona civil identificada, investida de autoridad para regular la circulación vehicular y peatonal, y vigilar, controlar e intervenir en el cumplimiento de las normas de tránsito y transporte, en cada uno de los entes territoriales.",
+        tarea: "Observa a un agente de tránsito y comenta cuál es su función."
+      },
+      {
+        term: "AUTOPISTA",
+        def: "Vía de calzadas separadas, cada una con dos o más carriles, con intersecciones en desnivel o mediante entradas y salidas directas a otras carreteras, y control de velocidades mínimas y máximas por carril.",
+        tarea: "Identifica una autopista en tu ciudad y comenta sus características."
+      },
+      {
+        term: "BAHIA DE ESTACIONAMIENTO",
+        def: "Parte complementaria de la estructura de la vía utilizada como zona de transición entre la calzada y el andén, destinada al estacionamiento de vehículos.",
+        tarea: "Busca una bahía de estacionamiento y explica su función."
+      },
+      {
+        term: "BERMA",
+        def: "Parte de la estructura de la vía, destinada al soporte lateral de la calzada, para el tránsito de peatones, semovientes y, ocasionalmente, estacionamiento de vehículos y tránsito de vehículos de emergencia.",
+        tarea: "Observa una berma y di para qué sirve."
+      },
+      {
+        term: "BUS",
+        def: "Vehículo automotor destinado al transporte colectivo de personas y sus equipajes, debidamente registrado conforme a las normas y características especiales vigentes.",
+        tarea: "Identifica los buses en tu barrio y comenta cómo ayudan al transporte público."
+      },
+      {
+        term: "CARRETERA",
+        def: "Vía cuya finalidad es permitir la circulación de vehículos, con niveles adecuados de seguridad y comodidad.",
+        tarea: "Dibuja una carretera y explica su importancia."
+      },
+      {
+        term: "CARRIL",
+        def: "Parte de la calzada destinada al tránsito de una sola fila de vehículos.",
+        tarea: "Observa los carriles en una vía y comenta por qué son importantes."
+      },
+      {
+        term: "CASCO",
+        def: "Pieza que cubre la cabeza, especialmente diseñada para proteger contra golpes, sin impedir la visión periférica adecuada.",
+        tarea: "Dibuja un casco y explica por qué debes usarlo."
+      },
+      {
+        term: "CHOQUE O COLISION",
+        def: "Encuentro violento entre dos o más vehículos, o entre un vehículo y otro objeto.",
+        tarea: "Explica a tu familia cómo evitar un choque o colisión."
+      },
+      {
+        term: "CICLORUTA",
+        def: "Vía o sección de calzada destinada exclusivamente para el tránsito de bicicletas.",
+        tarea: "Identifica una ciclorruta y comenta su utilidad."
+      },
+      {
+        term: "CICLOMOTOR",
+        def: "Bicicleta que además de bicicletas en forma ocasional se accionan con un motor.",
+        tarea: "Busca imágenes de ciclomotores y explica cómo funcionan."
+      },
+      {
+        term: "CINTURON DE SEGURIDAD",
+        def: "Conjunto de tiras, hebillas y seguros con que cuentan los vehículos automotores, que permiten asegurar al usuario en su puesto y disminuir los riesgos de sufrir lesiones en caso de accidente.",
+        tarea: "Dibuja un cinturón de seguridad y explica su función."
+      },
+      {
+        term: "COMPARENDO",
+        def: "Orden formal de notificación al presunto contraventor de las normas de tránsito, dejada por la autoridad de tránsito en un formato único.",
+        tarea: "Observa un comparendo y explica por qué es importante cumplir las normas."
+      },
+      {
+        term: "ESTACIONAMIENTO",
+        def: "Lugar en el que, de manera temporal, se permite el parqueo de vehículos.",
+        tarea: "Identifica un estacionamiento y explica para qué sirve."
+      },
+      {
+        term: "INFRACCION",
+        def: "Transgresión o violación de una norma de tránsito.",
+        tarea: "Explica a tu familia qué es una infracción y cómo evitarla."
+      },
+      {
+        term: "PEATON",
+        def: "Persona que transita a pie por una vía.",
+        tarea: "Dibuja un peatón y comenta por qué debe respetar las señales."
+      },
+      {
+        term: "PASAJERO",
+        def: "Persona distinta del conductor que se moviliza en un vehículo público.",
+        tarea: "Explica la función de un pasajero en el transporte público."
+      },
+      {
+        term: "SEMÁFORO",
+        def: "Dispositivo electrónico utilizado para regular el tránsito de vehículos y peatones, mediante el uso de señales luminosas.",
+        tarea: "Observa un semáforo y comenta cómo funciona."
+      },
+      {
+        term: "SEÑAL DE TRANSITO",
+        def: "Dispositivo físico o marca especial, preventiva y reglamentariamente establecido como deber del tránsito en general.",
+        tarea: "Identifica una señal de tránsito y explica su mensaje."
+      },
+      {
+        term: "TRAFICO",
+        def: "Volumen de vehículos, personas o productos que pasan por un punto específico de una vía durante un periodo determinado.",
+        tarea: "Observa el tráfico en tu ciudad y comenta sus efectos."
+      },
+      {
+        term: "TRANSITO",
+        def: "Es la movilización de personas, animales o vehículos por una vía pública o privada abierta al público.",
+        tarea: "Explica el significado de tránsito y su importancia."
+      },
+      {
+        term: "VEHICULO",
+        def: "Todo aparato montado sobre ruedas que permite el transporte de personas, animales o cosas de un punto a otro por las vías terrestres.",
+        tarea: "Identifica los vehículos en tu barrio y comenta cómo ayudan a la movilidad."
+      },
+      {
+        term: "VIA",
+        def: "Zona de uso público destinada al tránsito de vehículos, personas y animales.",
+        tarea: "Dibuja una vía y explica para qué sirve."
+      }
+    ];
+
+    // --- ESTADO DEL JUEGO ---
+    let state = {
+      screen: "inicio",
+      playerName: "",
+      avatarIndex: 0,
+      sonido: true,
+      salir: false,
+      currentQ: 0,
+      aciertos: 0,
+      timer: null,
+      timeLeft: TIEMPO_PREGUNTA,
+      letrasEncontradas: [],
+      letrasFallidas: [],
+      tareasPendientes: [],
+      winTimestamp: null,
+      startTimestamp: null,
+      preguntaRespondida: false // para pausar el tiempo en modales
+    };
+
+    // --- UTILS ---
+    function $(sel) { return document.querySelector(sel);}
+    function appHtml(html) { $("#app").innerHTML = html; }
+    function playSound(id) {
+      if (!state.sonido) return;
+      const audio = document.getElementById(id);
+      if (audio) { audio.currentTime=0; audio.play(); }
+    }
+    function stopSound(id) {
+      const audio = document.getElementById(id);
+      if (audio) { audio.pause(); audio.currentTime=0; }
+    }
+    function lanzarConfetti() {
+      const colors = ["#fde047","#fbbf24","#10b981","#38bdf8","#f472b6","#6366f1","#f43f5e"];
+      const confettiContainer = document.getElementById('confetti');
+      confettiContainer.innerHTML = '';
+      confettiContainer.className = 'confetti';
+      for(let i=0; i<70; i++){
+        const div = document.createElement('div');
+        div.className = 'confetti-piece';
+        div.style.background = colors[Math.floor(Math.random()*colors.length)];
+        div.style.left = Math.random()*99+'vw';
+        div.style.top = (Math.random()*10)+'vh';
+        div.style.transform = `rotate(${Math.random()*360}deg)`;
+        div.style.animationDelay = (Math.random()*0.7)+'s';
+        confettiContainer.appendChild(div);
+      }
+      setTimeout(()=>{ confettiContainer.innerHTML=''; }, 1900);
+      playSound("audio-fiesta");
+    }
+
+    // --- Vista Inicial ---
+    function renderInicio() {
+      stopSound("audio-tictac");
+      clearInterval(state.timer);
+      state.timer = null;
+      state.salir = false;
+      appHtml(`
+        <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 0.7em;">
+          <h1 class="text-4xl font-bold mb-3 text-yellow-600 text-center">Adivina Términos</h1>
+          <div class="mb-4 text-lg text-gray-700 text-center">¡Descubre los términos para convertirte en un <span class="font-semibold text-blue-500">héroe vial</span>!<br>Tercer nivel de la Secretaría de Tránsito del Tolima.</div>
+          <div class="flex flex-col items-center mb-3">
+            <label class="mb-1 text-gray-600 font-medium">Nombre:</label>
+            <input type="text" id="nombre" class="rounded-lg border-2 border-blue-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-56 mb-2 text-center" maxlength="12" placeholder="Escribe tu nombre" value="${state.playerName}">
+            <label class="mb-2 text-gray-600 font-medium">Elige tu avatar:</label>
+            <div class="flex flex-row flex-wrap gap-3 justify-center items-center mb-2">
+              ${AVATARS.map((url,i)=>`
+                <img src="${url}" class="avatar-img${state.avatarIndex===i?' selected':''}" onclick="setAvatar(${i})" alt="avatar ${i+1}">
+              `).join("")}
+            </div>
+          </div>
+          <div class="mb-4 flex items-center justify-center gap-2">
+            <button onclick="toggleSonido()" class="text-lg px-3 py-1 rounded-xl bg-yellow-200 hover:bg-yellow-300 font-bold">
+              ${state.sonido ? "🔊 Sonido ON" : "🔇 Sonido OFF"}
+            </button>
+          </div>
+          <button onclick="startGame()" class="game-btn bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-8 py-3 rounded-xl shadow-xl text-2xl mt-2">¡Jugar!</button>
+          <div class="mt-4 text-sm text-gray-400">Copyright © Oscar Polania - Sec. Tránsito del Tolima</div>
+        </div>
+      `);
+      playSound("audio-inicio");
+      window.setAvatar = (i)=>{state.avatarIndex=i; renderInicio();}
+      window.toggleSonido = ()=>{state.sonido=!state.sonido; renderInicio();}
+    }
+
+    // --- Juego Principal ---
+    function startGame() {
+      let nombre = state.playerName;
+      if (state.screen === "inicio") {
+        nombre = $("#nombre").value.trim();
+        if (nombre.length < 2) {
+          $("#nombre").classList.add('shake');
+          setTimeout(()=>$("#nombre").classList.remove('shake'), 400);
+          return;
+        }
+      }
+      state.playerName = nombre;
+      state.screen = "juego";
+      state.salir = false;
+      state.currentQ = 0;
+      state.aciertos = 0;
+      state.tareasPendientes = [];
+      state.winTimestamp = null;
+      state.startTimestamp = Date.now();
+      setupPregunta();
+      renderPregunta();
+      startTimer();
+    }
+
+    function setupPregunta() {
+      state.letrasEncontradas = [];
+      state.letrasFallidas = [];
+      state.timeLeft = TIEMPO_PREGUNTA;
+      state.preguntaRespondida = false;
+    }
+
+    function startTimer() {
+      clearInterval(state.timer);
+      state.timer = setInterval(()=>{
+        if(state.salir || state.preguntaRespondida) {
+          clearInterval(state.timer);
+          return;
+        }
+        state.timeLeft--;
+        renderTimerUI();
+        if(state.timeLeft<=0){
+          clearInterval(state.timer);
+          setTimeout(()=>{
+            // Termina la pregunta y pasa a siguiente
+            nextPregunta(false); // no acertó
+          }, 700);
+        }
+      },1000);
+      playSound("audio-tictac");
+    }
+
+    function renderTimerUI() {
+      if ($("#timer-ui")) $("#timer-ui").textContent = state.timeLeft;
+    }
+
+    function renderPregunta() {
+      if(state.salir) return;
+      state.screen = "juego";
+      const pregunta = PREGUNTAS[state.currentQ];
+      appHtml(`
+        <div class="rounded-3xl shadow-2xl p-4 sm:p-7 flex flex-col items-center w-full stage-bg animate-fadeIn min-h-[400px] relative modal-juego" id="modal-pregunta">
+          <div class="flex flex-row w-full justify-between items-start mb-2 relative">
+            <div class="flex flex-col items-center" style="min-width:85px;">
+              <button onclick="salirAJugar()" class="btn-salir mb-2" style="align-self: flex-start;">❌ Salir</button>
+              <img src="${AVATARS[state.avatarIndex]}" class="avatar-img mb-1" alt="Avatar">
+              <span class="text-blue-700 font-bold text-lg mt-1">${state.playerName}</span>
+            </div>
+            <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" class="tránsito-entity-img ml-3 mt-2" alt="Secretaría de Tránsito">
+          </div>
+          <span class="font-bold text-xl text-yellow-700 nivel-txt mb-1">Nivel 3 - Adivina el Término</span>
+          <div class="pregunta-txt text-center mb-2">
+            ${pregunta.def}
+          </div>
+          <div class="w-full flex flex-col items-center mb-4">
+            <span class="timer" id="timer-ui">${state.timeLeft}</span>
+            <div class="flex flex-wrap items-center justify-center mb-2">
+              ${renderGuiones(pregunta.term)}
+            </div>
+          </div>
+          <div class="w-full flex flex-row gap-5 justify-center mt-2 mb-2">
+            <button onclick="abrirModalLetra()" class="game-btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl" ${faltanLetras(pregunta.term) <= 1 ? "disabled style='opacity:0.6;pointer-events:none'" : ""}>Ingresar Letra</button>
+            <button onclick="abrirModalRespuesta()" class="game-btn bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl">Responder</button>
+          </div>
+          <div class="flex justify-between w-full mt-2 mb-1 items-center">
+            <span class="text-md font-bold text-blue-700">Aciertos: ${state.aciertos}</span>
+            <span class="text-md font-bold text-yellow-700">Pregunta: ${state.currentQ+1} / ${PREGUNTAS.length}</span>
+          </div>
+        </div>
+      `);
+      window.abrirModalLetra = abrirModalLetra;
+      window.abrirModalRespuesta = abrirModalRespuesta;
+      window.salirAJugar = salirAJugar;
+    }
+
+    function renderGuiones(term) {
+      let termUpper = term.toUpperCase();
+      let html = "";
+      for (let i = 0; i < termUpper.length; i++) {
+        let letra = termUpper[i];
+        if (letra === " ") {
+          html += `<span class="guion-letra" style="width:24px;color:#fff;">&nbsp;</span>`;
+        } else if (state.letrasEncontradas.includes(letra)) {
+          html += `<span class="guion-letra" style="color:#10b981;font-weight:bold;">${letra}</span>`;
+        } else {
+          html += `<span class="guion-letra">_</span>`;
+        }
+      }
+      return html;
+    }
+
+    function abrirModalLetra() {
+      state.preguntaRespondida = true;
+      stopSound("audio-tictac");
+      Swal.fire({
+        html: `
+          <div class="flex flex-col items-center mt-2">
+            <div class="font-bold text-2xl mb-2">Ingresa la letra</div>
+            <input type="text" id="input-letra" class="rounded-lg border-2 text-center px-4 py-2 mb-3" maxlength="1" style="width:52px;font-size:2rem;">
+            <div class="flex flex-row gap-3 mt-2">
+              <button id="btn-ingresar-letra" class="swal2-confirm game-btn bg-green-600 text-white font-bold px-4 py-2 rounded-lg" disabled>Ingresar</button>
+              <button id="btn-atras-letra" class="swal2-cancel game-btn bg-blue-600 text-white font-bold px-4 py-2 rounded-lg">Atrás</button>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: false,
+        customClass: {popup: 'rounded-2xl modal-juego'},
+        didOpen: () => {
+          const input = $("#input-letra");
+          const btnIn = $("#btn-ingresar-letra");
+          const btnBack = $("#btn-atras-letra");
+          input.focus();
+          input.addEventListener("input", ()=>{
+            btnIn.disabled = input.value.trim().length!==1;
+          });
+          btnIn.addEventListener("click", ()=>{
+            ingresarLetra(input.value.trim().toUpperCase());
+            Swal.close();
+          });
+          btnBack.addEventListener("click", ()=>{
+            Swal.close();
+            state.preguntaRespondida = false;
+            startTimer();
+          });
+        }
+      });
+    }
+
+    function ingresarLetra(letra) {
+      if (!letra || letra.length !== 1) return;
+      const pregunta = PREGUNTAS[state.currentQ];
+      let termUpper = pregunta.term.toUpperCase();
+      if (termUpper.includes(letra)) {
+        if (!state.letrasEncontradas.includes(letra)) state.letrasEncontradas.push(letra);
+        playSound("audio-bien");
+        Swal.fire({
+          position: 'top',
+          icon: 'success',
+          title: '¡Letra encontrada!',
+          showConfirmButton: false,
+          timer: 2000,
+          customClass: {popup: 'rounded-2xl modal-juego'}
+        }).then(()=>{
+          state.preguntaRespondida = false;
+          startTimer();
+          renderPregunta();
+        });
+      } else {
+        if (!state.letrasFallidas.includes(letra)) state.letrasFallidas.push(letra);
+        playSound("audio-mal");
+        Swal.fire({
+          position: 'top',
+          icon: 'error',
+          title: 'Letra no existe',
+          showConfirmButton: false,
+          timer: 2000,
+          customClass: {popup: 'rounded-2xl modal-juego'}
+        }).then(()=>{
+          state.preguntaRespondida = false;
+          startTimer();
+          renderPregunta();
+        });
+      }
+    }
+
+    function abrirModalRespuesta() {
+      state.preguntaRespondida = true;
+      stopSound("audio-tictac");
+      Swal.fire({
+        html: `
+          <div class="flex flex-col items-center mt-2">
+            <div class="font-bold text-2xl mb-2">Ingresa la Respuesta</div>
+            <input type="text" id="input-respuesta" class="rounded-lg border-2 text-center px-4 py-2 mb-3" maxlength="40" style="width:220px;font-size:1.2rem;">
+            <div class="flex flex-row gap-3 mt-2">
+              <button id="btn-ingresar-resp" class="swal2-confirm game-btn bg-green-600 text-white font-bold px-4 py-2 rounded-lg" disabled>Responder</button>
+              <button id="btn-atras-resp" class="swal2-cancel game-btn bg-blue-600 text-white font-bold px-4 py-2 rounded-lg">Atrás</button>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: false,
+        customClass: {popup: 'rounded-2xl modal-juego'},
+        didOpen: () => {
+          const input = $("#input-respuesta");
+          const btnResp = $("#btn-ingresar-resp");
+          const btnBack = $("#btn-atras-resp");
+          input.focus();
+          input.addEventListener("input", ()=>{
+            btnResp.disabled = input.value.trim().length < 1;
+          });
+          btnResp.addEventListener("click", ()=>{
+            ingresarRespuesta(input.value.trim());
+            Swal.close();
+          });
+          btnBack.addEventListener("click", ()=>{
+            Swal.close();
+            state.preguntaRespondida = false;
+            startTimer();
+          });
+        }
+      });
+    }
+
+    function normalizarTexto(txt) {
+      return (txt||"").toUpperCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar tildes
+        .replace(/[^A-Z0-9 ]/g, ""); // quitar símbolos
+    }
+
+    function ingresarRespuesta(resp) {
+  const pregunta = PREGUNTAS[state.currentQ];
+  const esperado = normalizarTexto(pregunta.term);
+  const recibido = normalizarTexto(resp);
+  let esCorrecto = recibido === esperado;
+  if (state.currentQ === PREGUNTAS.length-1) {
+    // última pregunta, no mostrar alerta, ir a fin
+    setTimeout(()=>nextPregunta(esCorrecto), 800);
+    return;
+  }
+  if (esCorrecto) {
+    playSound("audio-bien");
+    Swal.fire({
+      icon: 'success',
+      title: '¡Muy bien!',
+      html: `<span style="font-size:1.3em;color:#16a34a;font-weight:600;">Es correcto</span>`,
+      showConfirmButton: false,
+      timer: 2000,
+      customClass: {popup: 'rounded-2xl modal-juego'}
+    }).then(()=>{
+      nextPregunta(true); // suma acierto
+    });
+  } else {
+    playSound("audio-mal");
+    Swal.fire({
+      icon: 'error',
+      title: '¡Debes analizar mejor!',
+      html: `<span style="font-size:1.3em;color:#dc2626;font-weight:600;">Es Incorrecto</span>`,
+      showConfirmButton: false,
+      timer: 2000,
+      customClass: {popup: 'rounded-2xl modal-juego'}
+    }).then(()=>{
+      nextPregunta(false); // no suma acierto
+    });
+  }
+}
+
+    function faltanLetras(term) {
+      let termUpper = term.toUpperCase();
+      let total = 0;
+      for (let i=0; i<termUpper.length; i++) {
+        let letra = termUpper[i];
+        if (letra !== " " && !state.letrasEncontradas.includes(letra)) total++;
+      }
+      return total;
+    }
+
+    function nextPregunta(acierto) {
+      state.preguntaRespondida = false;
+      stopSound("audio-tictac");
+      clearInterval(state.timer);
+      if (acierto) {
+        state.aciertos++;
+        if (PREGUNTAS[state.currentQ].tarea) {
+          state.tareasPendientes.push(PREGUNTAS[state.currentQ].tarea);
+        }
+      }
+      if (state.currentQ < PREGUNTAS.length-1) {
+        state.currentQ++;
+        setupPregunta();
+        renderPregunta();
+        startTimer();
+      } else {
+        // Fin del juego
+        state.winTimestamp = Date.now();
+        renderFin();
+      }
+    }
+
+    function salirAJugar() {
+      state.salir = true;
+      renderInicio();
+    }
+
+    // --- FIN DEL JUEGO ---
+    function renderFin() {
+      stopSound("audio-tictac");
+      clearInterval(state.timer);
+      state.screen = "fin";
+      const aprobado = state.aciertos >= MINIMO_ACIERTOS;
+      if(aprobado) setTimeout(lanzarConfetti, 100);
+      appHtml(`
+        <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn relative">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 0.7em;">
+          <img src="${AVATARS[state.avatarIndex]}" class="avatar-img" alt="Avatar" style="margin-bottom:0.5em">
+          <h2 class="text-3xl font-bold text-yellow-700 mb-2">${aprobado?FELICITACION:"¡Inténtalo de nuevo!"}</h2>
+          <div class="text-lg font-medium text-blue-600 mb-2">Terminaste el nivel de adivinar términos.</div>
+          <div class="mb-2 text-xl font-bold text-yellow-500">Aciertos: <span class="text-blue-900">${state.aciertos}</span> / ${PREGUNTAS.length}</div>
+          ${ 
+            aprobado 
+            ? `<div class="aprobado-txt">¡Haz superado este reto! 🎉</div>
+                <div class="codigo-premio">Tu código de ganador: <span>${CODIGO_PREMIO}</span></div>
+                <div class="text-green-600 font-bold text-lg mb-2 animate-bounce">¡Eres un Héroe Vial!</div>`
+            : `<div class="text-pink-700 font-bold text-lg mb-2 animate-pulse">
+                  ¡Sigue intentando hasta lograrlo!
+               </div>`
+          }
+          <div class="mb-4">
+            <button onclick="verTareas()" class="game-btn bg-green-400 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold mt-1">Ver tareas para casa</button>
+          </div>
+          <div class="mt-2 flex flex-col gap-2">
+            <button onclick="renderInicio()" class="game-btn px-4 py-2 bg-blue-200 hover:bg-blue-400 text-blue-900 rounded-lg font-bold">Volver al inicio</button>
+            <button onclick="jugarDeNuevo()" class="game-btn px-4 py-2 bg-yellow-300 hover:bg-yellow-400 text-yellow-900 rounded-lg font-bold">Jugar de nuevo</button>
+          </div>
+          <div class="mt-4 text-gray-400 text-xs">Actividad pedagógica Secretaría de Tránsito Departamental</div>
+        </div>
+      `);
+      window.verTareas = renderTareas;
+      window.jugarDeNuevo = jugarDeNuevo;
+    }
+
+    function jugarDeNuevo() {
+      state.salir = false;
+      state.screen = "juego";
+      startGame();
+    }
+
+    function verTareas() {
+      appHtml(`
+        <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 0.7em;">
+          <img src="${AVATARS[state.avatarIndex]}" class="avatar-img" alt="Avatar" style="margin-bottom:0.5em">
+          <h2 class="text-2xl font-bold text-green-700 mb-3">Tareas para hacer en casa</h2>
+          <ul class="mb-4 w-full max-w-lg text-base list-disc list-inside text-gray-700">
+            ${state.tareasPendientes.length === 0 ? 
+              `<li>¡No hay tareas pendientes! Juega otra vez para conseguir nuevas tareas.</li>`
+              : state.tareasPendientes.map(t=>`<li class="mb-2">${t}</li>`).join("")}
+          </ul>
+          <div class="mb-2">
+            <button onclick="renderFin()" class="game-btn bg-yellow-300 hover:bg-yellow-500 text-white px-5 py-2 rounded font-bold">Volver</button>
+          </div>
+          <div class="text-gray-400 text-xs">Actividad pedagógica Secretaría de Tránsito Departamental</div>
+        </div>
+      `);
+    }
+
+    // Lanzar el inicio al cargar
+    renderInicio();
+  </script>
+</body>
+</html>
