@@ -661,22 +661,24 @@
     }
 
     function ingresarRespuesta(resp) {
-      const pregunta = PREGUNTAS[state.currentQ];
-      const esperado = normalizarTexto(pregunta.term);
-      const recibido = normalizarTexto(resp);
-      const esCorrecto = recibido === esperado;
+  // Pausar de inmediato timer y tictac para evitar cualquier superposición
+  state.preguntaRespondida = true;
+  clearInterval(state.timer);
+  stopTicTac();
 
-      // Sonidos
-      if (esCorrecto) playSound("audio-bien"); else playSound("audio-mal");
+  const pregunta = PREGUNTAS[state.currentQ];
+  const esperado = normalizarTexto(pregunta.term);
+  const recibido = normalizarTexto(resp);
+  const esCorrecto = recibido === esperado;
 
-      // Pausar el tick-tock antes de mostrar la alerta
-      stopTicTac();
+  // Sonido (ya sin tictac)
+  playSound(esCorrecto ? "audio-bien" : "audio-mal");
 
-      // Alerta con palabra y significado
-      mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
-        nextPregunta(esCorrecto);
-      });
-    }
+  // Alerta con palabra y significado
+  mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
+    nextPregunta(esCorrecto); // aquí se reanuda el timer/tictac si corresponde
+  });
+}
 
     function faltanLetras(term) {
       let termUpper = term.toUpperCase();
