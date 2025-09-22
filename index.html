@@ -668,6 +668,9 @@
       // Sonidos
       if (esCorrecto) playSound("audio-bien"); else playSound("audio-mal");
 
+      // Pausar el tick-tock antes de mostrar la alerta
+      stopTicTac();
+
       // Alerta con palabra y significado
       mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
         nextPregunta(esCorrecto);
