@@ -125,6 +125,23 @@
       margin-bottom: 1em;
       display: inline-block;
     }
+
+    /* Carros */
+    .cars-wrap {
+      position: relative;
+      width: 100%;
+      height: 80px;
+      margin-bottom: 6px;
+    }
+    .car-img {
+      position: absolute;
+      top: 4px;
+      width: clamp(44px, 10vw, 78px);
+      height: auto;
+      transition: left 0.35s ease, right 0.35s ease, transform 0.25s ease;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+    }
+
     @media (max-width:600px) {
       .avatar-img { width: 48px; height: 68px; }
       .max-w-md, .max-w-lg { max-width: 95vw !important;}
@@ -153,7 +170,7 @@
   <div id="app" class="w-full max-w-2xl mx-auto mt-4 relative"></div>
   <div id="confetti"></div>
 
-  <!-- SONIDOS NUEVOS -->
+  <!-- SONIDOS -->
   <audio id="audio-inicio" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756841760/intro_b1nuvu.mp3" preload="auto"></audio>
   <audio id="audio-tictac" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756843183/tictoc_j7oje6.mp3" preload="auto"></audio>
   <audio id="audio-bien" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844320/correcto_svttl1.mp3" preload="auto"></audio>
@@ -165,10 +182,10 @@
     // --- CONSTANTES ---
     const CODIGO_PREMIO = "STT1109";
     const FELICITACION = "¡Haz completado el tercer nivel, eres un Guardián Digital de la Seguridad Vial!";
-    const TIEMPO_PREGUNTA = 90; // segundos por pregunta
+    const TIEMPO_PREGUNTA = 60; // segundos por pregunta
     const MINIMO_ACIERTOS = 15;
 
-    // Avatares igual que antes
+    // Avatares
     const AVATARS = [
       "https://res.cloudinary.com/dqqeavica/image/upload/v1756828158/avatar_1_gjnwup.png",
       "https://res.cloudinary.com/dqqeavica/image/upload/v1756828158/avatar_2_om3ufg.png",
@@ -177,6 +194,12 @@
       "https://res.cloudinary.com/dqqeavica/image/upload/v1756828159/avatar_5_yx0wam.png",
       "https://res.cloudinary.com/dqqeavica/image/upload/v1756828159/avatar_6_gdxczb.png"
     ];
+
+    // Precarga desde parámetros de la URL (si viene del Nivel 2)
+    const _params = new URLSearchParams(window.location.search);
+    const _paramNombre = (_params.get('nombre') || '').trim();
+    const _paramAvatarRaw = parseInt(_params.get('avatar'), 10);
+    const _paramAvatar = Number.isFinite(_paramAvatarRaw) && _paramAvatarRaw >= 0 && _paramAvatarRaw < AVATARS.length ? _paramAvatarRaw : 0;
 
     // --- PREGUNTAS Y RESPUESTAS ---
     const PREGUNTAS = [
@@ -285,8 +308,8 @@
     // --- ESTADO DEL JUEGO ---
     let state = {
       screen: "inicio",
-      playerName: "",
-      avatarIndex: 0,
+      playerName: _paramNombre,
+      avatarIndex: _paramAvatar,
       sonido: true,
       salir: false,
       currentQ: 0,
@@ -298,7 +321,9 @@
       tareasPendientes: [],
       winTimestamp: null,
       startTimestamp: null,
-      preguntaRespondida: false // para pausar el tiempo en modales
+      preguntaRespondida: false, // para pausar el tiempo en modales
+      failCount: 0,              // fallas de palabra (no letras)
+      crashed: false             // bandera de choque
     };
 
     // --- UTILS ---
@@ -313,7 +338,14 @@
       const audio = document.getElementById(id);
       if (audio) { audio.pause(); audio.currentTime=0; }
     }
-    function lanzarConfetti() {
+    function playTicTac() {
+      stopSound("audio-tictac");
+      playSound("audio-tictac");
+    }
+    function stopTicTac() { stopSound("audio-tictac"); }
+
+    // Confetti visual (sin sonido)
+    function confettiVisual() {
       const colors = ["#fde047","#fbbf24","#10b981","#38bdf8","#f472b6","#6366f1","#f43f5e"];
       const confettiContainer = document.getElementById('confetti');
       confettiContainer.innerHTML = '';
@@ -329,23 +361,22 @@
         confettiContainer.appendChild(div);
       }
       setTimeout(()=>{ confettiContainer.innerHTML=''; }, 1900);
-      playSound("audio-fiesta");
     }
 
     // --- Vista Inicial ---
     function renderInicio() {
-      stopSound("audio-tictac");
+      stopTicTac();
       clearInterval(state.timer);
       state.timer = null;
       state.salir = false;
       appHtml(`
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn">
-          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 0.7em;">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 1rem;">
           <h1 class="text-4xl font-bold mb-3 text-yellow-600 text-center">Adivina Términos</h1>
-          <div class="mb-4 text-lg text-gray-700 text-center">Descubre los términos para convertirte en <br><span class="font-semibold text-blue-500">Guardián Digital de la Seguridad Vial</span></div>
+          <div class="mb-4 text-lg text-gray-700 text-center">Descubre los términos para convertirte en <br><span class="font-semibold text-blue-500">Guardián Digital de la Seguridad Vial</span>.</div>
           <div class="flex flex-col items-center mb-3">
             <label class="mb-1 text-gray-600 font-medium">Nombre:</label>
-            <input type="text" id="nombre" class="rounded-lg border-2 border-blue-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-56 mb-2 text-center" maxlength="12" placeholder="Escribe tu nombre" value="${state.playerName}">
+            <input type="text" id="nombre" class="rounded-lg border-2 border-blue-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-56 mb-2 text-center" maxlength="12" placeholder="Tu nombre...">
             <label class="mb-2 text-gray-600 font-medium">Elige tu avatar:</label>
             <div class="flex flex-row flex-wrap gap-3 justify-center items-center mb-2">
               ${AVATARS.map((url,i)=>`
@@ -362,6 +393,8 @@
           <div class="mt-4 text-sm text-gray-400">Copyright © Oscar Polania - Sec. Tránsito del Tolima</div>
         </div>
       `);
+      const _in = document.getElementById('nombre');
+      if (_in && state.playerName) _in.value = state.playerName;
       playSound("audio-inicio");
       window.setAvatar = (i)=>{state.avatarIndex=i; renderInicio();}
       window.toggleSonido = ()=>{state.sonido=!state.sonido; renderInicio();}
@@ -371,13 +404,14 @@
     function startGame() {
       let nombre = state.playerName;
       if (state.screen === "inicio") {
-        nombre = $("#nombre").value.trim();
+        const inp = $("#nombre");
+        nombre = inp ? inp.value.trim() : nombre;
         if (nombre.length < 2) {
-          $("#nombre").classList.add('shake');
-          setTimeout(()=>$("#nombre").classList.remove('shake'), 400);
+          if (inp) { inp.classList.add('shake'); setTimeout(()=>inp.classList.remove('shake'), 400); }
           return;
         }
       }
+      stopSound("audio-inicio"); // evitar superposición
       state.playerName = nombre;
       state.screen = "juego";
       state.salir = false;
@@ -386,6 +420,8 @@
       state.tareasPendientes = [];
       state.winTimestamp = null;
       state.startTimestamp = Date.now();
+      state.failCount = 0;
+      state.crashed = false;
       setupPregunta();
       renderPregunta();
       startTimer();
@@ -409,13 +445,12 @@
         renderTimerUI();
         if(state.timeLeft<=0){
           clearInterval(state.timer);
-          setTimeout(()=>{
-            // Termina la pregunta y pasa a siguiente
-            nextPregunta(false); // no acertó
-          }, 700);
+          stopTicTac();
+          // tiempo agotado: falla de palabra
+          nextPregunta(false);
         }
       },1000);
-      playSound("audio-tictac");
+      playTicTac();
     }
 
     function renderTimerUI() {
@@ -426,8 +461,14 @@
       if(state.salir) return;
       state.screen = "juego";
       const pregunta = PREGUNTAS[state.currentQ];
+
+      // Progreso de acercamiento de carros: 0..1 (máx 6 fallas)
+      const progress = Math.min(state.failCount, 6) / 6;
+      // Distancia lateral desde los bordes al centro (%). 2% -> 48% en 6 pasos.
+      const stepPct = (2 + (46 * progress)).toFixed(2);
+
       appHtml(`
-        <div class="rounded-3xl shadow-2xl p-4 sm:p-7 flex flex-col items-center w-full stage-bg animate-fadeIn min-h-[400px] relative modal-juego" id="modal-pregunta">
+        <div class="rounded-3xl shadow-2xl p-4 sm:p-7 flex flex-col items-center w-full stage-bg animate-fadeIn min-h-[420px] relative modal-juego" id="modal-pregunta">
           <div class="flex flex-row w-full justify-between items-start mb-2 relative">
             <div class="flex flex-col items-center" style="min-width:85px;">
               <button onclick="salirAJugar()" class="btn-salir mb-2" style="align-self: flex-start;">❌ Salir</button>
@@ -436,20 +477,31 @@
             </div>
             <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" class="tránsito-entity-img ml-3 mt-2" alt="Secretaría de Tránsito">
           </div>
+
           <span class="font-bold text-xl text-yellow-700 nivel-txt mb-1">Nivel 3 - Adivina el Término</span>
+
           <div class="pregunta-txt text-center mb-2">
             ${pregunta.def}
           </div>
+
+          <!-- Carros acercándose sobre el área del término -->
+          <div class="cars-wrap">
+            <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1758566037/auto_gs8jkq.png" alt="Auto 1" class="car-img" style="left: ${stepPct}%;">
+            <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1758566037/auto_gs8jkq.png" alt="Auto 2" class="car-img" style="right: ${stepPct}%; transform: scaleX(-1);">
+          </div>
+
           <div class="w-full flex flex-col items-center mb-4">
             <span class="timer" id="timer-ui">${state.timeLeft}</span>
             <div class="flex flex-wrap items-center justify-center mb-2">
               ${renderGuiones(pregunta.term)}
             </div>
           </div>
+
           <div class="w-full flex flex-row gap-5 justify-center mt-2 mb-2">
-            <button onclick="abrirModalLetra()" class="game-btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl" ${faltanLetras(pregunta.term) <= 1 ? "disabled style='opacity:0.6;pointer-events:none'" : ""}>Ingresar Letra</button>
+            <button onclick="abrirModalLetra()" class="game-btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl" ${faltanLetras(pregunta.term) <= 1 ? "disabled" : ""}>Ingresar letra</button>
             <button onclick="abrirModalRespuesta()" class="game-btn bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl">Responder</button>
           </div>
+
           <div class="flex justify-between w-full mt-2 mb-1 items-center">
             <span class="text-md font-bold text-blue-700">Aciertos: ${state.aciertos}</span>
             <span class="text-md font-bold text-yellow-700">Pregunta: ${state.currentQ+1} / ${PREGUNTAS.length}</span>
@@ -479,7 +531,7 @@
 
     function abrirModalLetra() {
       state.preguntaRespondida = true;
-      stopSound("audio-tictac");
+      stopTicTac();
       Swal.fire({
         html: `
           <div class="flex flex-col items-center mt-2">
@@ -527,7 +579,7 @@
           icon: 'success',
           title: '¡Letra encontrada!',
           showConfirmButton: false,
-          timer: 2000,
+          timer: 1600,
           customClass: {popup: 'rounded-2xl modal-juego'}
         }).then(()=>{
           state.preguntaRespondida = false;
@@ -542,7 +594,7 @@
           icon: 'error',
           title: 'Letra no existe',
           showConfirmButton: false,
-          timer: 2000,
+          timer: 1600,
           customClass: {popup: 'rounded-2xl modal-juego'}
         }).then(()=>{
           state.preguntaRespondida = false;
@@ -554,7 +606,7 @@
 
     function abrirModalRespuesta() {
       state.preguntaRespondida = true;
-      stopSound("audio-tictac");
+      stopTicTac();
       Swal.fire({
         html: `
           <div class="flex flex-col items-center mt-2">
@@ -596,42 +648,31 @@
         .replace(/[^A-Z0-9 ]/g, ""); // quitar símbolos
     }
 
+    // Alerta con título = palabra y texto = definición, success/error
+    function mostrarAlertaResultado(esCorrecto, pregunta) {
+      return Swal.fire({
+        icon: esCorrecto ? 'success' : 'error',
+        title: pregunta.term,
+        text: pregunta.def,
+        confirmButtonText: 'Continuar',
+        customClass: {popup: 'rounded-2xl modal-juego'}
+      });
+    }
+
     function ingresarRespuesta(resp) {
-  const pregunta = PREGUNTAS[state.currentQ];
-  const esperado = normalizarTexto(pregunta.term);
-  const recibido = normalizarTexto(resp);
-  let esCorrecto = recibido === esperado;
-  if (state.currentQ === PREGUNTAS.length-1) {
-    // última pregunta, no mostrar alerta, ir a fin
-    setTimeout(()=>nextPregunta(esCorrecto), 800);
-    return;
-  }
-  if (esCorrecto) {
-    playSound("audio-bien");
-    Swal.fire({
-      icon: 'success',
-      title: '¡Muy bien!',
-      html: `<span style="font-size:1.3em;color:#16a34a;font-weight:600;">Es correcto</span>`,
-      showConfirmButton: false,
-      timer: 2000,
-      customClass: {popup: 'rounded-2xl modal-juego'}
-    }).then(()=>{
-      nextPregunta(true); // suma acierto
-    });
-  } else {
-    playSound("audio-mal");
-    Swal.fire({
-      icon: 'error',
-      title: '¡Debes analizar mejor!',
-      html: `<span style="font-size:1.3em;color:#dc2626;font-weight:600;">Es Incorrecto</span>`,
-      showConfirmButton: false,
-      timer: 2000,
-      customClass: {popup: 'rounded-2xl modal-juego'}
-    }).then(()=>{
-      nextPregunta(false); // no suma acierto
-    });
-  }
-}
+      const pregunta = PREGUNTAS[state.currentQ];
+      const esperado = normalizarTexto(pregunta.term);
+      const recibido = normalizarTexto(resp);
+      const esCorrecto = recibido === esperado;
+
+      // Sonidos
+      if (esCorrecto) playSound("audio-bien"); else playSound("audio-mal");
+
+      // Alerta con palabra y significado
+      mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
+        nextPregunta(esCorrecto);
+      });
+    }
 
     function faltanLetras(term) {
       let termUpper = term.toUpperCase();
@@ -645,14 +686,36 @@
 
     function nextPregunta(acierto) {
       state.preguntaRespondida = false;
-      stopSound("audio-tictac");
+      stopTicTac();
       clearInterval(state.timer);
+
       if (acierto) {
         state.aciertos++;
         if (PREGUNTAS[state.currentQ].tarea) {
           state.tareasPendientes.push(PREGUNTAS[state.currentQ].tarea);
         }
+      } else {
+        // Falla de palabra: acercar carros
+        state.failCount++;
+        if (state.failCount >= 6) {
+          // Choque: terminar juego
+          state.crashed = true;
+          stopTicTac();
+          playSound("audio-fin");
+          Swal.fire({
+            icon: 'error',
+            title: '¡Choque!',
+            text: 'Has acumulado 6 fallas. Fin del juego.',
+            confirmButtonText: 'Aceptar',
+            customClass: {popup: 'rounded-2xl modal-juego'}
+          }).then(()=>{
+            renderFin();
+          });
+          return;
+        }
       }
+
+      // Avanzar o finalizar
       if (state.currentQ < PREGUNTAS.length-1) {
         state.currentQ++;
         setupPregunta();
@@ -672,19 +735,22 @@
 
     // --- FIN DEL JUEGO ---
     function renderFin() {
-      stopSound("audio-tictac");
+      stopTicTac();
       clearInterval(state.timer);
       state.screen = "fin";
-      const aprobado = state.aciertos >= MINIMO_ACIERTOS;
-      if(aprobado) setTimeout(lanzarConfetti, 100);
+      const aprobado = !state.crashed && state.aciertos >= MINIMO_ACIERTOS;
+      if (aprobado) {
+        setTimeout(confettiVisual, 100);
+        playSound("audio-bien"); // sonido de acierto al ganar
+      }
       appHtml(`
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn relative">
-          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 0.7em;">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 1rem;">
           <img src="${AVATARS[state.avatarIndex]}" class="avatar-img" alt="Avatar" style="margin-bottom:0.5em">
           <h2 class="text-3xl font-bold text-yellow-700 mb-2">${aprobado?FELICITACION:"¡Inténtalo de nuevo!"}</h2>
           <div class="text-lg font-medium text-blue-600 mb-2">Terminaste el nivel de adivinar términos.</div>
           <div class="mb-2 text-xl font-bold text-yellow-500">Aciertos: <span class="text-blue-900">${state.aciertos}</span> / ${PREGUNTAS.length}</div>
-          ${ 
+          ${
             aprobado 
             ? `<div class="aprobado-txt">¡Haz superado este reto! 🎉</div>
                 <div class="codigo-premio">Tu código de ganador: <span>${CODIGO_PREMIO}</span></div>
@@ -694,6 +760,11 @@
                </div>`
           }
           <div class="mb-4">
+            <!-- Botón solicitado: Genera tu Mención (sin pasar datos) -->
+            <div class="mb-2">
+              <a href="https://botheart911.github.io/transito-certificacion/" class="game-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold">Genera tu Mención</a>
+            </div>
+            <!-- Mantener Ver tareas para casa -->
             <button onclick="verTareas()" class="game-btn bg-green-400 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold mt-1">Ver tareas para casa</button>
           </div>
           <div class="mt-2 flex flex-col gap-2">
@@ -716,7 +787,7 @@
     function verTareas() {
       appHtml(`
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn">
-          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 0.7em;">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 1rem;">
           <img src="${AVATARS[state.avatarIndex]}" class="avatar-img" alt="Avatar" style="margin-bottom:0.5em">
           <h2 class="text-2xl font-bold text-green-700 mb-3">Tareas para hacer en casa</h2>
           <ul class="mb-4 w-full max-w-lg text-base list-disc list-inside text-gray-700">
