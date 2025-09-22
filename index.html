@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>3. !Adivina Términos!</title>
+  <title>3. ¡Adivina Términos!</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Favicon -->
   <link rel="icon" href="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/Logo_rkja6o.png" type="image/png">
@@ -171,12 +171,12 @@
   <div id="confetti"></div>
 
   <!-- SONIDOS -->
-  <audio id="audio-inicio" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756841760/intro_b1nuvu.mp3" preload="auto"></audio>
-  <audio id="audio-tictac" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756843183/tictoc_j7oje6.mp3" preload="auto"></audio>
-  <audio id="audio-bien" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844320/correcto_svttl1.mp3" preload="auto"></audio>
-  <audio id="audio-mal" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844319/incorrecto_h5vgbl.mp3" preload="auto"></audio>
-  <audio id="audio-fin" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844514/final_ein36c.mp3" preload="auto"></audio>
-  <audio id="audio-fiesta" src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844514/ganar_tfdnmh.mp3" preload="auto"></audio>
+  <audio id="audio-inicio"   src="https://res.cloudinary.com/dqqeavica/video/upload/v1756841760/intro_b1nuvu.mp3" preload="auto"></audio>
+  <audio id="audio-tictac"   src="https://res.cloudinary.com/dqqeavica/video/upload/v1756843183/tictoc_j7oje6.mp3" preload="auto"></audio>
+  <audio id="audio-bien"     src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844320/correcto_svttl1.mp3" preload="auto"></audio>
+  <audio id="audio-mal"      src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844319/incorrecto_h5vgbl.mp3" preload="auto"></audio>
+  <audio id="audio-fin"      src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844514/final_ein36c.mp3" preload="auto"></audio>
+  <audio id="audio-fiesta"   src="https://res.cloudinary.com/dqqeavica/video/upload/v1756844514/ganar_tfdnmh.mp3" preload="auto"></audio>
 
   <script>
     // --- CONSTANTES ---
@@ -348,9 +348,10 @@
     function confettiVisual() {
       const colors = ["#fde047","#fbbf24","#10b981","#38bdf8","#f472b6","#6366f1","#f43f5e"];
       const confettiContainer = document.getElementById('confetti');
+      const N = 70;
       confettiContainer.innerHTML = '';
       confettiContainer.className = 'confetti';
-      for(let i=0; i<70; i++){
+      for(let i=0; i<N; i++){
         const div = document.createElement('div');
         div.className = 'confetti-piece';
         div.style.background = colors[Math.floor(Math.random()*colors.length)];
@@ -371,12 +372,12 @@
       state.salir = false;
       appHtml(`
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn">
-          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 1rem;">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3">
           <h1 class="text-4xl font-bold mb-3 text-yellow-600 text-center">Adivina Términos</h1>
-          <div class="mb-4 text-lg text-gray-700 text-center">Descubre los términos para convertirte en <br><span class="font-semibold text-blue-500">Guardián Digital de la Seguridad Vial</span>.</div>
+          <div class="mb-4 text-lg text-gray-700 text-center">Descubre los términos para convertirte en <br><span class="font-semibold text-blue-500">Guardián Digital de la Seguridad Vial</span></div>
           <div class="flex flex-col items-center mb-3">
             <label class="mb-1 text-gray-600 font-medium">Nombre:</label>
-            <input type="text" id="nombre" class="rounded-lg border-2 border-blue-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-56 mb-2 text-center" maxlength="12" placeholder="Tu nombre...">
+            <input type="text" id="nombre" class="rounded-lg border-2 border-blue-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-56 mb-2 text-center" maxlength="12" />
             <label class="mb-2 text-gray-600 font-medium">Elige tu avatar:</label>
             <div class="flex flex-row flex-wrap gap-3 justify-center items-center mb-2">
               ${AVATARS.map((url,i)=>`
@@ -498,7 +499,7 @@
           </div>
 
           <div class="w-full flex flex-row gap-5 justify-center mt-2 mb-2">
-            <button onclick="abrirModalLetra()" class="game-btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl" ${faltanLetras(pregunta.term) <= 1 ? "disabled" : ""}>Ingresar letra</button>
+            <button onclick="abrirModalLetra()" class="game-btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl" ${faltanLetras(pregunta.term) <= 1 ? "disabled" : ""}>Letra</button>
             <button onclick="abrirModalRespuesta()" class="game-btn bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl">Responder</button>
           </div>
 
@@ -668,6 +669,9 @@
       // Sonidos
       if (esCorrecto) playSound("audio-bien"); else playSound("audio-mal");
 
+      // Pausar el tick-tock antes de mostrar la alerta
+      stopTicTac();
+
       // Alerta con palabra y significado
       mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
         nextPregunta(esCorrecto);
@@ -745,7 +749,7 @@
       }
       appHtml(`
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn relative">
-          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 1rem;">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3">
           <img src="${AVATARS[state.avatarIndex]}" class="avatar-img" alt="Avatar" style="margin-bottom:0.5em">
           <h2 class="text-3xl font-bold text-yellow-700 mb-2">${aprobado?FELICITACION:"¡Inténtalo de nuevo!"}</h2>
           <div class="text-lg font-medium text-blue-600 mb-2">Terminaste el nivel de adivinar términos.</div>
@@ -774,7 +778,7 @@
           <div class="mt-4 text-gray-400 text-xs">Actividad pedagógica Secretaría de Tránsito Departamental</div>
         </div>
       `);
-      window.verTareas = renderTareas;
+      window.verTareas = verTareas;
       window.jugarDeNuevo = jugarDeNuevo;
     }
 
@@ -787,7 +791,7 @@
     function verTareas() {
       appHtml(`
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn">
-          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3" style="margin-bottom: 1rem;">
+          <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3">
           <img src="${AVATARS[state.avatarIndex]}" class="avatar-img" alt="Avatar" style="margin-bottom:0.5em">
           <h2 class="text-2xl font-bold text-green-700 mb-3">Tareas para hacer en casa</h2>
           <ul class="mb-4 w-full max-w-lg text-base list-disc list-inside text-gray-700">
