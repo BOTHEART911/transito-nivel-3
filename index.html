@@ -605,63 +605,54 @@
       }
     }
 
-    function abrirModalRespuesta() {
-      state.preguntaRespondida = true;
-      stopTicTac();
-      Swal.fire({
-        html: `
-          <div class="flex flex-col items-center mt-2">
-            <div class="font-bold text-2xl mb-2">Ingresa la Respuesta</div>
-            <input type="text" id="input-respuesta" class="rounded-lg border-2 text-center px-4 py-2 mb-3" maxlength="40" style="width:220px;font-size:1.2rem;">
-            <div class="flex flex-row gap-3 mt-2">
-              <button id="btn-ingresar-resp" class="swal2-confirm game-btn bg-green-600 text-white font-bold px-4 py-2 rounded-lg" disabled>Responder</button>
-              <button id="btn-atras-resp" class="swal2-cancel game-btn bg-blue-600 text-white font-bold px-4 py-2 rounded-lg">Atrás</button>
-            </div>
-          </div>
-        `,
-        showConfirmButton: false,
-        showCancelButton: false,
-        customClass: {popup: 'rounded-2xl modal-juego'},
-        didOpen: () => {
-          const input = $("#input-respuesta");
-          const btnResp = $("#btn-ingresar-resp");
-          const btnBack = $("#btn-atras-resp");
-          input.focus();
-          input.addEventListener("input", ()=>{
-            btnResp.disabled = input.value.trim().length < 1;
-          });
-          btnResp.addEventListener("click", ()=>{
-            ingresarRespuesta(input.value.trim());
-            Swal.close();
-          });
-          btnBack.addEventListener("click", ()=>{
-            Swal.close();
-            state.preguntaRespondida = false;
-            startTimer();
-          });
-        }
+   function abrirModalRespuesta() {
+  state.preguntaRespondida = true;
+  stopTicTac();
+  Swal.fire({
+    html: `
+      <div class="flex flex-col items-center mt-2">
+        <div class="font-bold text-2xl mb-2">Ingresa la Respuesta</div>
+        <input type="text" id="input-respuesta" class="rounded-lg border-2 text-center px-4 py-2 mb-3" maxlength="40" style="width:220px;font-size:1.2rem;">
+        <div class="flex flex-row gap-3 mt-2">
+          <button id="btn-ingresar-resp" class="swal2-confirm game-btn bg-green-600 text-white font-bold px-4 py-2 rounded-lg" disabled>Responder</button>
+          <button id="btn-atras-resp" class="swal2-cancel game-btn bg-blue-600 text-white font-bold px-4 py-2 rounded-lg">Atrás</button>
+        </div>
+      </div>
+    `,
+    showConfirmButton: false,
+    showCancelButton: false,
+    customClass: {popup: 'rounded-2xl modal-juego'},
+    didOpen: () => {
+      const input = $("#input-respuesta");
+      const btnResp = $("#btn-ingresar-resp");
+      const btnBack = $("#btn-atras-resp");
+      input.focus();
+      input.addEventListener("input", ()=>{
+        btnResp.disabled = input.value.trim().length < 1;
+      });
+      btnResp.addEventListener("click", ()=>{
+        const valor = input.value.trim();
+        Swal.close();              // 1) cerrar primero el modal actual
+        setTimeout(()=>{           // 2) en el siguiente tick, abrir la alerta de resultado
+          ingresarRespuesta(valor);
+        }, 0);
+      });
+      btnBack.addEventListener("click", ()=>{
+        Swal.close();
+        state.preguntaRespondida = false;
+        startTimer();
       });
     }
-
+  });
+}
     function normalizarTexto(txt) {
       return (txt||"").toUpperCase()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar tildes
         .replace(/[^A-Z0-9 ]/g, ""); // quitar símbolos
     }
 
-    // Alerta con título = palabra y texto = definición, success/error
-    function mostrarAlertaResultado(esCorrecto, pregunta) {
-      return Swal.fire({
-        icon: esCorrecto ? 'success' : 'error',
-        title: pregunta.term,
-        text: pregunta.def,
-        confirmButtonText: 'Continuar',
-        customClass: {popup: 'rounded-2xl modal-juego'}
-      });
-    }
-
     function ingresarRespuesta(resp) {
-  // Pausar de inmediato timer y tictac para evitar cualquier superposición
+  // Pausar inmediatamente timer y tictac
   state.preguntaRespondida = true;
   clearInterval(state.timer);
   stopTicTac();
@@ -674,9 +665,9 @@
   // Sonido (ya sin tictac)
   playSound(esCorrecto ? "audio-bien" : "audio-mal");
 
-  // Alerta con palabra y significado
+  // Mostrar alerta con término y definición
   mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
-    nextPregunta(esCorrecto); // aquí se reanuda el timer/tictac si corresponde
+    nextPregunta(esCorrecto); // aquí se reanuda flujo (y timer en la siguiente pregunta)
   });
 }
 
