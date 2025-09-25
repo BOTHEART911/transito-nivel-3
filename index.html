@@ -195,13 +195,13 @@
       "https://res.cloudinary.com/dqqeavica/image/upload/v1756828159/avatar_6_gdxczb.png"
     ];
 
-    // Precarga desde parámetros de la URL (si viene del Nivel 2)
+    // Precarga desde Nivel 2
     const _params = new URLSearchParams(window.location.search);
     const _paramNombre = (_params.get('nombre') || '').trim();
     const _paramAvatarRaw = parseInt(_params.get('avatar'), 10);
     const _paramAvatar = Number.isFinite(_paramAvatarRaw) && _paramAvatarRaw >= 0 && _paramAvatarRaw < AVATARS.length ? _paramAvatarRaw : 0;
 
-    // --- PREGUNTAS Y RESPUESTAS ---
+    // PREGUNTAS
     const PREGUNTAS = [
   {
     term: "ACERA O ANDEN",
@@ -321,9 +321,10 @@
       tareasPendientes: [],
       winTimestamp: null,
       startTimestamp: null,
-      preguntaRespondida: false, // para pausar el tiempo en modales
-      failCount: 0,              // fallas de palabra (no letras)
-      crashed: false             // bandera de choque
+      preguntaRespondida: false,
+      failCount: 0,
+      crashed: false,
+      ganarReproducido: false // NUEVO: sonido de ganar solo una vez
     };
 
     // --- UTILS ---
@@ -344,7 +345,7 @@
     }
     function stopTicTac() { stopSound("audio-tictac"); }
 
-    // Confetti visual (sin sonido)
+    // Confetti visual (sonido controlado para una sola vez)
     function confettiVisual() {
       const colors = ["#fde047","#fbbf24","#10b981","#38bdf8","#f472b6","#6366f1","#f43f5e"];
       const confettiContainer = document.getElementById('confetti');
@@ -362,6 +363,10 @@
         confettiContainer.appendChild(div);
       }
       setTimeout(()=>{ confettiContainer.innerHTML=''; }, 1900);
+      if (!state.ganarReproducido) {
+        playSound("audio-fiesta");
+        state.ganarReproducido = true;
+      }
     }
 
     // --- Vista Inicial ---
@@ -374,10 +379,13 @@
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn">
           <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3">
           <h1 class="text-4xl font-bold mb-3 text-yellow-600 text-center">Adivina Términos</h1>
-          <div class="mb-4 text-lg text-gray-700 text-center">Descubre los términos para convertirte en <br><span class="font-semibold text-blue-500">Guardián Digital de la Seguridad Vial</span></div>
+          <div class="mb-4 text-lg text-gray-700 text-center">
+            Descubre los términos para convertirte en <br>
+            <span class="font-semibold text-blue-500">Guardián Digital de la Seguridad Vial</span>.
+          </div>
           <div class="flex flex-col items-center mb-3">
             <label class="mb-1 text-gray-600 font-medium">Nombre:</label>
-            <input type="text" id="nombre" class="rounded-lg border-2 border-blue-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-56 mb-2 text-center" maxlength="12" />
+            <input type="text" id="nombre" class="rounded-lg border-2 border-blue-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-56 mb-2 text-center" maxlength="12" placeholder="Tu nombre">
             <label class="mb-2 text-gray-600 font-medium">Elige tu avatar:</label>
             <div class="flex flex-row flex-wrap gap-3 justify-center items-center mb-2">
               ${AVATARS.map((url,i)=>`
@@ -412,7 +420,7 @@
           return;
         }
       }
-      stopSound("audio-inicio"); // evitar superposición
+      stopSound("audio-inicio");
       state.playerName = nombre;
       state.screen = "juego";
       state.salir = false;
@@ -423,6 +431,7 @@
       state.startTimestamp = Date.now();
       state.failCount = 0;
       state.crashed = false;
+      state.ganarReproducido = false;
       setupPregunta();
       renderPregunta();
       startTimer();
@@ -447,7 +456,6 @@
         if(state.timeLeft<=0){
           clearInterval(state.timer);
           stopTicTac();
-          // tiempo agotado: falla de palabra
           nextPregunta(false);
         }
       },1000);
@@ -462,10 +470,7 @@
       if(state.salir) return;
       state.screen = "juego";
       const pregunta = PREGUNTAS[state.currentQ];
-
-      // Progreso de acercamiento de carros: 0..1 (máx 6 fallas)
       const progress = Math.min(state.failCount, 6) / 6;
-      // Distancia lateral desde los bordes al centro (%). 2% -> 48% en 6 pasos.
       const stepPct = (2 + (46 * progress)).toFixed(2);
 
       appHtml(`
@@ -481,11 +486,10 @@
 
           <span class="font-bold text-xl text-yellow-700 nivel-txt mb-1">Nivel 3 - Adivina el Término</span>
 
-          <div class="pregunta-txt text-center mb-2">
-            ${pregunta.def}
-          </div>
+            <div class="pregunta-txt text-center mb-2">
+              ${pregunta.def}
+            </div>
 
-          <!-- Carros acercándose sobre el área del término -->
           <div class="cars-wrap">
             <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1758566037/auto_gs8jkq.png" alt="Auto 1" class="car-img" style="left: ${stepPct}%;">
             <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1758566037/auto_gs8jkq.png" alt="Auto 2" class="car-img" style="right: ${stepPct}%; transform: scaleX(-1);">
@@ -499,7 +503,7 @@
           </div>
 
           <div class="w-full flex flex-row gap-5 justify-center mt-2 mb-2">
-            <button onclick="abrirModalLetra()" class="game-btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl" ${faltanLetras(pregunta.term) <= 1 ? "disabled" : ""}>Letra</button>
+            <button onclick="abrirModalLetra()" class="game-btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl" ${faltanLetras(pregunta.term) <= 1 ? "disabled opacity-50 cursor-not-allowed":""}>Letra</button>
             <button onclick="abrirModalRespuesta()" class="game-btn bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 rounded-xl shadow-xl text-xl">Responder</button>
           </div>
 
@@ -577,16 +581,16 @@
         playSound("audio-bien");
         Swal.fire({
           position: 'top',
-          icon: 'success',
-          title: '¡Letra encontrada!',
-          showConfirmButton: false,
-          timer: 1600,
-          customClass: {popup: 'rounded-2xl modal-juego'}
-        }).then(()=>{
-          state.preguntaRespondida = false;
-          startTimer();
-          renderPregunta();
-        });
+            icon: 'success',
+            title: '¡Letra encontrada!',
+            showConfirmButton: false,
+            timer: 1600,
+            customClass: {popup: 'rounded-2xl modal-juego'}
+          }).then(()=>{
+            state.preguntaRespondida = false;
+            startTimer();
+            renderPregunta();
+          });
       } else {
         if (!state.letrasFallidas.includes(letra)) state.letrasFallidas.push(letra);
         playSound("audio-mal");
@@ -605,95 +609,91 @@
       }
     }
 
-   function abrirModalRespuesta() {
-  state.preguntaRespondida = true;
-  stopTicTac();
-  Swal.fire({
-    html: `
-      <div class="flex flex-col items-center mt-2">
-        <div class="font-bold text-2xl mb-2">Ingresa la Respuesta</div>
-        <input type="text" id="input-respuesta" class="rounded-lg border-2 text-center px-4 py-2 mb-3" maxlength="40" style="width:220px;font-size:1.2rem;">
-        <div class="flex flex-row gap-3 mt-2">
-          <button id="btn-ingresar-resp" class="swal2-confirm game-btn bg-green-600 text-white font-bold px-4 py-2 rounded-lg" disabled>Responder</button>
-          <button id="btn-atras-resp" class="swal2-cancel game-btn bg-blue-600 text-white font-bold px-4 py-2 rounded-lg">Atrás</button>
-        </div>
-      </div>
-    `,
-    showConfirmButton: false,
-    showCancelButton: false,
-    customClass: {popup: 'rounded-2xl modal-juego'},
-    didOpen: () => {
-      const input = $("#input-respuesta");
-      const btnResp = $("#btn-ingresar-resp");
-      const btnBack = $("#btn-atras-resp");
-      input.focus();
-      input.addEventListener("input", ()=>{
-        btnResp.disabled = input.value.trim().length < 1;
-      });
-      btnResp.addEventListener("click", ()=>{
-        const valor = input.value.trim();
-        Swal.close();              // 1) cerrar primero el modal actual
-        setTimeout(()=>{           // 2) en el siguiente tick, abrir la alerta de resultado
-          ingresarRespuesta(valor);
-        }, 0);
-      });
-      btnBack.addEventListener("click", ()=>{
-        Swal.close();
-        state.preguntaRespondida = false;
-        startTimer();
+    function abrirModalRespuesta() {
+      state.preguntaRespondida = true;
+      stopTicTac();
+      Swal.fire({
+        html: `
+          <div class="flex flex-col items-center mt-2">
+            <div class="font-bold text-2xl mb-2">Ingresa la Respuesta</div>
+            <input type="text" id="input-respuesta" class="rounded-lg border-2 text-center px-4 py-2 mb-3" maxlength="40" style="width:220px;font-size:1.2rem;">
+            <div class="flex flex-row gap-3 mt-2">
+              <button id="btn-ingresar-resp" class="swal2-confirm game-btn bg-green-600 text-white font-bold px-4 py-2 rounded-lg" disabled>Responder</button>
+              <button id="btn-atras-resp" class="swal2-cancel game-btn bg-blue-600 text-white font-bold px-4 py-2 rounded-lg">Atrás</button>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: false,
+        customClass: {popup: 'rounded-2xl modal-juego'},
+        didOpen: () => {
+          const input = $("#input-respuesta");
+          const btnResp = $("#btn-ingresar-resp");
+          const btnBack = $("#btn-atras-resp");
+          input.focus();
+          input.addEventListener("input", ()=>{
+            btnResp.disabled = input.value.trim().length < 1;
+          });
+          btnResp.addEventListener("click", ()=>{
+            const valor = input.value.trim();
+            Swal.close();
+            setTimeout(()=>{ ingresarRespuesta(valor); }, 0);
+          });
+          btnBack.addEventListener("click", ()=>{
+            Swal.close();
+            state.preguntaRespondida = false;
+            startTimer();
+          });
+        }
       });
     }
-  });
-}
+
     function normalizarTexto(txt) {
       return (txt||"").toUpperCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar tildes
-        .replace(/[^A-Z0-9 ]/g, ""); // quitar símbolos
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Z0-9 ]/g, "");
     }
 
     function ingresarRespuesta(resp) {
-  // Pausar inmediatamente timer y tictac
-  state.preguntaRespondida = true;
-  clearInterval(state.timer);
-  stopTicTac();
+      state.preguntaRespondida = true;
+      clearInterval(state.timer);
+      stopTicTac();
 
-  const pregunta = PREGUNTAS[state.currentQ];
-  const esperado = normalizarTexto(pregunta.term);
-  const recibido = normalizarTexto(resp);
-  const esCorrecto = recibido === esperado;
+      const pregunta = PREGUNTAS[state.currentQ];
+      const esperado = normalizarTexto(pregunta.term);
+      const recibido = normalizarTexto(resp);
+      const esCorrecto = recibido === esperado;
 
-  // Sonido (ya sin tictac)
-  playSound(esCorrecto ? "audio-bien" : "audio-mal");
+      playSound(esCorrecto ? "audio-bien" : "audio-mal");
 
-  // Mostrar alerta con término y definición
-  mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
-    nextPregunta(esCorrecto); // aquí se reanuda flujo (y timer en la siguiente pregunta)
-  });
-}
+      mostrarAlertaResultado(esCorrecto, pregunta).then(()=>{
+        nextPregunta(esCorrecto);
+      });
+    }
 
     function mostrarAlertaResultado(esCorrecto, pregunta) {
-  const title = esCorrecto ? '¡Correcto!' : 'Respuesta incorrecta';
-  const icon = esCorrecto ? 'success' : 'error';
+      const title = esCorrecto ? '¡Correcto!' : 'Respuesta incorrecta';
+      const icon = esCorrecto ? 'success' : 'error';
 
-  return Swal.fire({
-    icon,
-    html: `
-      <div class="flex flex-col items-center gap-2 mt-1">
-        <div class="font-bold text-2xl ${esCorrecto ? 'text-green-600' : 'text-red-600'} mb-1">${title}</div>
-        <div class="text-blue-700 font-bold">Término:</div>
-        <div class="text-xl font-extrabold text-blue-900">${pregunta.term}</div>
-        <div class="text-gray-700 text-base mt-2 text-center">${pregunta.def}</div>
-        ${pregunta.tarea ? `<div class="text-sm text-amber-700 bg-amber-100 px-3 py-2 rounded-lg mt-2">Tarea: ${pregunta.tarea}</div>` : ''}
-      </div>
-    `,
-    confirmButtonText: 'Continuar',
-    showConfirmButton: true,
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    customClass: { popup: 'rounded-2xl modal-juego' }
-  });
-}
-    
+      return Swal.fire({
+        icon,
+        html: `
+          <div class="flex flex-col items-center gap-2 mt-1">
+            <div class="font-bold text-2xl ${esCorrecto ? 'text-green-600' : 'text-red-600'} mb-1">${title}</div>
+            <div class="text-blue-700 font-bold">Término:</div>
+            <div class="text-xl font-extrabold text-blue-900">${pregunta.term}</div>
+            <div class="text-gray-700 text-base mt-2 text-center">${pregunta.def}</div>
+            ${pregunta.tarea ? `<div class="text-sm text-amber-700 bg-amber-100 px-3 py-2 rounded-lg mt-2">Tarea: ${pregunta.tarea}</div>` : ''}
+          </div>
+        `,
+        confirmButtonText: 'Continuar',
+        showConfirmButton: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        customClass: { popup: 'rounded-2xl modal-juego' }
+      });
+    }
+
     function faltanLetras(term) {
       let termUpper = term.toUpperCase();
       let total = 0;
@@ -715,10 +715,8 @@
           state.tareasPendientes.push(PREGUNTAS[state.currentQ].tarea);
         }
       } else {
-        // Falla de palabra: acercar carros
         state.failCount++;
         if (state.failCount >= 6) {
-          // Choque: terminar juego
           state.crashed = true;
           stopTicTac();
           playSound("audio-fin");
@@ -735,14 +733,12 @@
         }
       }
 
-      // Avanzar o finalizar
       if (state.currentQ < PREGUNTAS.length-1) {
         state.currentQ++;
         setupPregunta();
         renderPregunta();
         startTimer();
       } else {
-        // Fin del juego
         state.winTimestamp = Date.now();
         renderFin();
       }
@@ -753,16 +749,23 @@
       renderInicio();
     }
 
-    // --- FIN DEL JUEGO ---
+    // --- FIN DEL JUEGO (Ajustado: sonido ganar solo una vez y botón certificación solo si gana) ---
     function renderFin() {
       stopTicTac();
       clearInterval(state.timer);
       state.screen = "fin";
       const aprobado = !state.crashed && state.aciertos >= MINIMO_ACIERTOS;
       if (aprobado) {
-        setTimeout(confettiVisual, 100);
-        playSound("audio-fiesta"); // sonido de acierto al ganar
+        setTimeout(()=>{
+          confettiVisual(); // dentro confettiVisual se controla audio-fiesta una sola vez
+        },100);
+      } else {
+        // Si pierde y no es choque por tiempo, reproducir sonido fin si no se reprodujo ya
+        playSound("audio-fin");
       }
+
+      const certUrl = "https://botheart911.github.io/transito-certificacion/";
+
       appHtml(`
         <div class="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center animate-fadeIn relative">
           <img src="https://res.cloudinary.com/dqqeavica/image/upload/v1756743104/secretaria_de_Transito_nxsvyp.jpg" alt="Secretaría de Tránsito" class="tránsito-entity-img mb-3">
@@ -774,24 +777,26 @@
             aprobado 
             ? `<div class="aprobado-txt">¡Haz superado este reto! 🎉</div>
                 <div class="codigo-premio">Tu código de ganador: <span>${CODIGO_PREMIO}</span></div>
-                <div class="text-green-600 font-bold text-lg mb-2 animate-bounce">¡Eres un Héroe Vial!</div>`
-            : `<div class="text-pink-700 font-bold text-lg mb-2 animate-pulse">
+                <div class="text-green-600 font-bold text-lg mb-4 animate-bounce">¡Eres un Héroe Vial!</div>`
+            : `<div class="text-pink-700 font-bold text-lg mb-4 animate-pulse">
                   ¡Sigue intentando hasta lograrlo!
                </div>`
           }
-          <div class="mb-4">
-            <!-- Botón solicitado: Genera tu Mención (sin pasar datos) -->
-            <div class="mb-2">
-              <a href="https://botheart911.github.io/transito-certificacion/" class="game-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold">Genera tu Mención</a>
-            </div>
-            <!-- Mantener Ver tareas para casa -->
+          <div class="mb-6 flex flex-col items-center">
             <button onclick="verTareas()" class="game-btn bg-green-400 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold mt-1">Ver tareas para casa</button>
+            ${
+              aprobado
+              ? `<div class="mt-6 flex justify-center w-full">
+                   <a href="${certUrl}" class="game-btn px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-lg text-center">Genera tu Mención</a>
+                 </div>`
+              : ""
+            }
           </div>
           <div class="mt-2 flex flex-col gap-2">
             <button onclick="renderInicio()" class="game-btn px-4 py-2 bg-blue-200 hover:bg-blue-400 text-blue-900 rounded-lg font-bold">Volver al inicio</button>
             <button onclick="jugarDeNuevo()" class="game-btn px-4 py-2 bg-yellow-300 hover:bg-yellow-400 text-yellow-900 rounded-lg font-bold">Jugar de nuevo</button>
           </div>
-          <div class="mt-4 text-gray-400 text-xs">Actividad pedagógica Secretaría de Tránsito Departamental</div>
+          <div class="mt-6 text-gray-400 text-xs">Actividad pedagógica Secretaría de Tránsito Departamental</div>
         </div>
       `);
       window.verTareas = verTareas;
@@ -823,7 +828,7 @@
       `);
     }
 
-    // Lanzar el inicio al cargar
+    // Lanzar el inicio
     renderInicio();
   </script>
 </body>
